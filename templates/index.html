@@ -1,219 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Watermarking</title>
+    <title>Image Marking Tool</title>
     <style>
-        /* Reset some default styles */
-        body, h1, h2, form, div {
-            margin: 0;
-            padding: 0;
-            text-align: center;
-        }
-
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            padding: 20px;
+            text-align: center;
         }
 
-        h1 {
-            font-size: 28px;
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        /* Define styles for the main container */
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
-            background-color: #fff;
             padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        /* Styles for the drop zone */
-        #pictures-drop-zone {
-            width: 93%;
-            height: 100px;
+        .drop-zone {
             border: 2px dashed #ccc;
-            text-align: center;
             padding: 20px;
-            cursor: pointer;
+            margin: 20px 0;
             background-color: #f9f9f9;
-        }
-
-        /* Styles for the watermark drop zone */
-        #watermark-drop-zone {
-            width: 93%;
-            height: 100px;
-            border: 2px dashed #ccc;
             text-align: center;
-            padding: 20px;
-            cursor: pointer;
-            background-color: #f9f9f9;
         }
 
-
-        .highlight {
-            background-color: #f0f0f0;
-        }
-
-        /* Style the watermark upload form */
-        .upload-form {
-            margin-top: 20px;
-        }
-
-        .upload-form h2 {
-            margin-bottom: 15px;
-        }
-
-        .upload-form input[type="file"] {
-            display: none;
-        }
-
-        .upload-form label {
-            display: block;
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-
-        .upload-button {
+        .button {
             background-color: #007bff;
             color: #fff;
-            border: none;
             padding: 10px 20px;
-            font-size: 16px;
+            border: none;
             cursor: pointer;
-            border-radius: 5px;
-        }
-
-        /* Style the message box */
-        #message-box {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 5px;
-            color: #155724;
             font-size: 16px;
         }
 
-        /* Style the download button */
-        .download-button {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .download-button input[type="submit"] {
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-            border-radius: 5px;
+        .button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Image Watermarking</h1>
-
-        <!-- Drag and drop box for uploading photos -->
-        <form method="POST" action="/upload-pictures" enctype="multipart/form-data" class="upload-form">
-            <h2>Upload Pictures</h2>
-            <div id="pictures-drop-zone" class="drop-zone">
-                <p>Drag &amp; Drop Pictures Here or Click to Upload</p>
-                <input type="file" name="pictures" id="pictures" multiple accept="image/jpeg" style="display: none;">
-            </div>
-        </form>
-
-        <!-- Display selected file name -->
-        <p id="selected-pictures-name"></p>
-
-        <!-- Form to upload watermark -->
-        <form method="POST" action="/upload-watermark" enctype="multipart/form-data" class="upload-form">
-            <h2>Upload Watermark</h2>
-            <div id="watermark-drop-zone" class="drop-zone">
-                <p>Drag &amp; Drop Watermark Here or Click to Upload</p>
-                <input type="file" name="watermark" id="watermark" accept="image/png" style="display: none;">
-            </div>
-        </form>
-
-        <!-- Display selected file name -->
-        <p id="selected-file-name"></p>
-
-        <!-- Message box -->
-        <div id="message-box">
-            <!-- Messages will be displayed here -->
+        <h1>Image Marking Tool</h1>
+        <div class="drop-zone" id="pictures-drop-zone">
+            <input type="file" id="pictures-input" accept="image/jpeg" multiple style="display: none;">
+            <p>Click to Select or Drop JPEG Images Here (Pictures)</p>
+            <ul id="selected-pictures-list"></ul>
         </div>
 
-        <!-- Mark Images button -->
-        <div class="download-button">
-            <form method="POST" action="/mark-images">
-                <input type="submit" value="Mark Images" class="download-button">
-            </form>
+        <div class="drop-zone" id="watermark-drop-zone">
+            <input type="file" id="watermark-input" accept="image/png" style="display: none;">
+            <p>Click to Select or Drop a PNG Image Here (Watermark)</p>
+            <ul id="selected-watermark-list"></ul>
         </div>
 
-        <!-- Download button -->
-        <div class="download-button">
-            <form method="GET" action="/download-marked">
-                <input type="submit" value="Download Marked Images" class="download-button">
-            </form>
-        </div>
+        <button class="button" id="mark-button">Mark Images</button>
 
-        <script>
-            const picturesDropZone = document.getElementById('pictures-drop-zone');
-            const picturesInput = document.getElementById('pictures');
-            const selectedPicturesNames = document.getElementById('selected-pictures-name');
+        <br><br><a href="/download-marked" class="btn btn-primary">
+                    <button class="button" id="download-button">Download Marked Images</button>
+                </a>
+    </div>
 
-            picturesInput.addEventListener('change', function () {
-                const files = picturesInput.files;
-                if (files.length > 0) {
-                    let fileList = 'Selected pictures: ';
-                    for (let i = 0; i < files.length; i++) {
-                        fileList += files[i].name;
-                        if (i < files.length - 1) {
-                            fileList += ', ';
-                        }
-                    }
-                    selectedPicturesNames.textContent = fileList;
-                } else {
-                    selectedPicturesNames.textContent = '';
-                }
-            });
+<!--Script that allows to select multiple JPEG in the pictures-drop-zone-->
+<script>
+    const picturesDropZone = document.getElementById("pictures-drop-zone");
+    const picturesInput = document.getElementById("pictures-input");
+    const selectedPicturesList = document.getElementById("selected-pictures-list");
 
-            picturesDropZone.addEventListener('click', function () {
-                picturesInput.click();
-            });
-        </script>
+    picturesDropZone.addEventListener("click", () => {
+        picturesInput.click();
+    });
 
-    <script>
-    const watermarkDropZone = document.getElementById('watermark-drop-zone');
-    const watermarkInput = document.getElementById('watermark');
-    const selectedFileName = document.getElementById('selected-file-name');
+    picturesInput.addEventListener("change", () => {
+        // Clear the previously displayed list of selected pictures
+        selectedPicturesList.innerHTML = '';
 
-    watermarkInput.addEventListener('change', function () {
-        const file = watermarkInput.files[0];
-        if (file) {
-            selectedFileName.textContent = `Selected watermark: ${file.name}`;
-        } else {
-            selectedFileName.textContent = '';
+        // Handle selected files here
+        const selectedFiles = picturesInput.files;
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const fileName = selectedFiles[i].name;
+
+            // Create a list item for each selected file
+            const listItem = document.createElement("li");
+            listItem.textContent = fileName;
+
+            // Append the list item to the <ul>
+            selectedPicturesList.appendChild(listItem);
         }
     });
+</script>
 
-    watermarkDropZone.addEventListener('click', function () {
+<!--Script that allows a single PNG file be selected with the watermark-drop-zone-->
+<script>
+    const watermarkDropZone = document.getElementById("watermark-drop-zone");
+    const watermarkInput = document.getElementById("watermark-input");
+    const selectedWatermarkList = document.getElementById("selected-watermark-list");
+
+    watermarkDropZone.addEventListener("click", () => {
         watermarkInput.click();
     });
-    </script>
-    </div>
+
+    watermarkInput.addEventListener("change", () => {
+        // Clear the previously displayed watermark file
+        selectedWatermarkList.innerHTML = '';
+
+        // Handle the selected watermark file here
+        const selectedFile = watermarkInput.files[0];
+
+        if (selectedFile && selectedFile.type === "image/png") {
+            // Display the selected PNG file name
+            const fileName = selectedFile.name;
+
+            // Create a list item for the selected watermark file
+            const listItem = document.createElement("li");
+            listItem.textContent = fileName;
+
+            // Append the list item to the <ul>
+            selectedWatermarkList.appendChild(listItem);
+        } else {
+            // If the selected file is not a valid PNG file, provide an error message
+            const errorMessage = document.createElement("li");
+            errorMessage.textContent = "Please select a valid PNG file.";
+            selectedWatermarkList.appendChild(errorMessage);
+        }
+    });
+</script>
+
+<!--Script to upload the JPEG and PNG files to the tmp folder-->
+<script>
+const markButton = document.getElementById("mark-button");
+
+markButton.addEventListener("click", () => {
+    // Create a FormData object to send the selected files
+    const formData = new FormData();
+
+    // Check if files are selected in the "pictures-drop-zone"
+    if (picturesInput.files.length === 0) {
+        alert("Please select one or more images.");
+        return;
+    }
+
+    // Append the selected JPEG files to the FormData
+    for (let i = 0; i < picturesInput.files.length; i++) {
+        formData.append("file", picturesInput.files[i]);
+    }
+
+    // Check if a file is selected in the "watermark-drop-zone"
+    if (watermarkInput.files.length === 0) {
+        alert("Please select a PNG image for watermarking.");
+        return;
+    }
+
+    // Append the selected PNG file to the FormData
+    if (watermarkInput.files.length === 1) {
+        formData.append("file", watermarkInput.files[0]);
+    } else {
+        alert("Please select only one PNG image for watermarking.");
+        return;
+    }
+
+    // Send a POST request to the Flask route
+    fetch("/upload", {
+        method: "POST",
+        body: formData,
+
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Handle the response here (e.g., display a success message)
+        console.log(data);
+        markButton.disabled = true;
+        picturesDropZone.disabled = true;
+        picturesInput.disabled = true;
+        watermarkDropZone.disabled = true;
+        watermarkInput.disabled = true;
+
+    })
+    .catch(error => {
+        // Handle errors
+        console.error(error);
+    });
+});
+</script>
+
+
 </body>
 </html>
