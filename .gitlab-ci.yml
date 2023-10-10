@@ -1,3 +1,4 @@
+# The Docker image that will be used to build your app
 image: python:3.10
 
 stages:
@@ -20,4 +21,5 @@ deploy:
     - gunicorn -c gunicorn_config.py app:app
   only:
     - master
+
 
