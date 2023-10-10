@@ -39,6 +39,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Image Marking Tool</h1>
@@ -56,9 +57,6 @@
 
         <button class="button" id="mark-button">Mark Images</button>
 
-        <br><br><a href="/download-marked" class="btn btn-primary">
-                    <button class="button" id="download-button">Download Marked Images</button>
-                </a>
     </div>
 
 <!--Script that allows to select multiple JPEG in the pictures-drop-zone-->
@@ -126,10 +124,11 @@
     });
 </script>
 
-<!--Script to upload the JPEG and PNG files to the tmp folder-->
+<!--Script to upload the JPEG and PNG files to the tmp folder
+performs the watermarking process and generates a zip file
+for the final user with the watermarked images-->
 <script>
 const markButton = document.getElementById("mark-button");
-
 markButton.addEventListener("click", () => {
     // Create a FormData object to send the selected files
     const formData = new FormData();
@@ -161,25 +160,31 @@ markButton.addEventListener("click", () => {
 
     // Send a POST request to the Flask route
     fetch("/upload", {
-        method: "POST",
-        body: formData,
+    method: "POST",
+    body: formData,
+})
+.then(response => {
+    if (response.ok) {
+        // Initiate the download
+        response.blob().then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "marked_images.zip";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
 
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Handle the response here (e.g., display a success message)
-        console.log(data);
-        markButton.disabled = true;
-        picturesDropZone.disabled = true;
-        picturesInput.disabled = true;
-        watermarkDropZone.disabled = true;
-        watermarkInput.disabled = true;
-
-    })
-    .catch(error => {
+        });
+    } else {
         // Handle errors
-        console.error(error);
-    });
+        console.error("An error occurred during processing. Please try again.");
+    }
+})
+.catch(error => {
+    // Handle errors
+    console.error(error);
+});
 });
 </script>
 

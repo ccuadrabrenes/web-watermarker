@@ -1,5 +1,4 @@
 import uuid
-
 from PIL import Image
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
@@ -17,8 +16,6 @@ def allowed_file(filename):
 
 app = Flask(__name__)
 
-uniq_id = str(uuid.uuid4())
-
 
 @app.route('/')
 def index():
@@ -26,18 +23,19 @@ def index():
 
 
 # Define the path to the 'tmp' folder
-UPLOAD_FOLDER = 'tmp'
+UPLOAD_FOLDER = './tmp/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+MARKED_FOLDER = './marked/'
+app.config['MARKED_FOLDER'] = MARKED_FOLDER
 
 
 @app.route('/upload', methods=['POST'])
-def upload_images():
+def upload_and_download():
+    uniq_id = str(uuid.uuid4())
 
-    # Check if the 'tmp' folder exists; if not, create it
-    if not os.path.exists(UPLOAD_FOLDER):
-        os.makedirs(UPLOAD_FOLDER)
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    # Check if the request contains files
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'})
 
@@ -47,87 +45,55 @@ def upload_images():
 
     for file in files:
         if file and allowed_file(file.filename):
-            # Save the file to the 'tmp' folder
-            if "png" in file.filename:
-                print(uniq_id)
-                filename = secure_filename(uniq_id[:8]+"-watermark.png")
-                print(filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                uploaded_files.append(filename)
-            else:
-                filename = secure_filename(uniq_id[:8]+"-"+file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                uploaded_files.append(filename)
-    return jsonify({'message': 'Files uploaded successfully', 'uploaded_files': uploaded_files})
+            filename = secure_filename(uniq_id[:8] + "-" + file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            uploaded_files.append(filename)
 
-
-@app.route('/download-marked')
-def download_marked_images():
     # Load the watermark image
-    watermark = Image.open("./tmp/"+uniq_id[:9]+"watermark.png")
+    watermark = Image.open("./tmp/" + uniq_id[:9] + "watermark.png")
 
     # Specify the input and output folders
-    input_folder = "./tmp"
-    output_folder = "./marked"
+    input_folder = app.config['UPLOAD_FOLDER']
+    output_folder = app.config['MARKED_FOLDER']
 
-    # Create the output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
-    # Define the percentage by which you want to resize the watermark (e.g., 50%)
-    resize_percentage = 30  # You can change this percentage as needed
+    resize_percentage = 30
 
-    # Process each JPEG file in the input folder
     for filename in os.listdir(input_folder):
         if filename.endswith(".jpg") or filename.endswith(".jpeg"):
-            # Open the JPEG image
             image = Image.open(os.path.join(input_folder, filename))
-
-            # Get the dimensions of the image
             img_width, img_height = image.size
-
-            # Calculate the new dimensions of the watermark based on the percentage
             watermark_width = int(img_width * (resize_percentage / 100))
             watermark_height = int(watermark.size[1] * (watermark_width / watermark.size[0]))
-
-            # Resize the watermark
             watermark_resized = watermark.resize((watermark_width, watermark_height), Image.LANCZOS)
-
-            # Calculate the position to center the resized watermark
             position = ((img_width - watermark_width) // 2, (img_height - watermark_height) // 2)
-
-            # Create a copy of the image to add the watermark
             marked_image = image.copy()
-
-            # Paste the resized watermark on the image at the center position
             marked_image.paste(watermark_resized, position, watermark_resized)
-
-            # Save the watermarked image to the output folder
             output_path = os.path.join(output_folder, filename)
             marked_image.save(output_path, "JPEG")
-            print(f"Image marked: {filename}")
 
-    # Check if there are marked images to download
     marked_images = os.listdir(output_folder)
+
     if len(marked_images) == 0:
         return jsonify({'error': 'No marked images available for download'})
 
-    # If there's only one marked image, send it as a single file
     if len(marked_images) == 1:
         return send_from_directory(output_folder, marked_images[0])
     else:
-        # # If there are multiple marked images, create a zip file and send it
-
-        matching_files = [filename for filename in os.listdir(output_folder) if filename.startswith(uniq_id[:9])]
-        zip_filename = input_folder+"/"+uniq_id[:9]+'marked_images.zip'  # Replace with your desired output path
+        print("GENERANDO EL ZIP")
+        matching_files = [filename for filename in os.listdir(output_folder) if filename.startswith(uniq_id[:8])]
+        zip_filename = app.config['UPLOAD_FOLDER'] + "/" + uniq_id[:9] + 'marked_images.zip'
 
         with zipfile.ZipFile(zip_filename, 'w') as zipf:
             for filename in matching_files:
                 file_path = os.path.join(output_folder, filename)
                 zipf.write(file_path, os.path.basename(file_path))
-
-        # Send the zip file as a download
-        return send_from_directory(input_folder, uniq_id[:9]+"marked_images.zip", as_attachment=True)
-
+        print(app.config["UPLOAD_FOLDER"])
+        print(uniq_id[:9] + "marked_images.zip")
+        print(app.config['UPLOAD_FOLDER'], uniq_id[:9] + "marked_images.zip")
+        #return send_from_directory(app.config['UPLOAD_FOLDER'], uniq_id[:9] + "marked_images.zip", as_attachment=True)
+        return send_from_directory(input_folder, uniq_id[:9] + "marked_images.zip", as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
