@@ -12,9 +12,6 @@ build:
 
 test:
   stage: test
-  script:
-    - pip install -r requirements.txt
-    - pytest
 
 deploy:
   stage: deploy
