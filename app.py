@@ -1,8 +1,12 @@
+import uuid
+
 from PIL import Image
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
 from werkzeug.utils import secure_filename
 import shutil
+import zipfile
+
 
 def allowed_file(filename):
     # Define the allowed file extensions
@@ -14,16 +18,22 @@ def allowed_file(filename):
 
 app = Flask(__name__)
 
+uniq_id = str(uuid.uuid4())
+
+
 @app.route('/')
 def index():
     return render_template("index.html")
+
 
 # Define the path to the 'tmp' folder
 UPLOAD_FOLDER = 'tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+
 @app.route('/upload', methods=['POST'])
 def upload_images():
+
     # Check if the 'tmp' folder exists; if not, create it
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
@@ -40,21 +50,22 @@ def upload_images():
         if file and allowed_file(file.filename):
             # Save the file to the 'tmp' folder
             if "png" in file.filename:
-                print("Este es un PNG y su nombre es: "+file.filename)
-                filename = secure_filename("watermark.png")
+                print(uniq_id)
+                filename = secure_filename(uniq_id[:8]+"-watermark.png")
+                print(filename)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 uploaded_files.append(filename)
             else:
-                filename = secure_filename(file.filename)
+                filename = secure_filename(uniq_id[:8]+"-"+file.filename)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 uploaded_files.append(filename)
-
     return jsonify({'message': 'Files uploaded successfully', 'uploaded_files': uploaded_files})
+
 
 @app.route('/download-marked')
 def download_marked_images():
     # Load the watermark image
-    watermark = Image.open("./tmp/watermark.png")
+    watermark = Image.open("./tmp/"+uniq_id[:9]+"watermark.png")
 
     # Specify the input and output folders
     input_folder = "./tmp"
@@ -105,12 +116,20 @@ def download_marked_images():
     if len(marked_images) == 1:
         return send_from_directory(output_folder, marked_images[0])
 
-    # If there are multiple marked images, create a zip file and send it
-    marked_images_zip = os.path.join(output_folder, 'marked_images.zip')
-    shutil.make_archive(marked_images_zip[:-4], 'zip', output_folder)
+    # # If there are multiple marked images, create a zip file and send it
+
+    matching_files = [filename for filename in os.listdir(output_folder) if filename.startswith(uniq_id[:9])]
+    zip_filename = input_folder+"/"+uniq_id[:9]+'marked_images.zip'  # Replace with your desired output path
+
+
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+        for filename in matching_files:
+            file_path = os.path.join(output_folder, filename)
+            zipf.write(file_path, os.path.basename(file_path))
 
     # Send the zip file as a download
-    return send_from_directory(output_folder, 'marked_images.zip', as_attachment=True)
+    return send_from_directory(input_folder,uniq_id[:9]+"marked_images.zip", as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
