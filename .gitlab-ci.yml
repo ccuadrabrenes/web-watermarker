@@ -2,11 +2,13 @@
 image: python:3.10
 
 pages:
+  stage: deploy
   script:
-  - pip install --no-cache-dir -r requirements.txt
-  - FLASK_APP=app.py
+    - pip install --no-cache-dir -r requirements.txt
+    - export FLASK_APP=app.py
+    - flask build  # Replace with the actual build command for your app
   artifacts:
     paths:
-    - public
-  rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      - public
+  only:
+    - $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
