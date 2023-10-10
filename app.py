@@ -4,7 +4,6 @@ from PIL import Image
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
 from werkzeug.utils import secure_filename
-import shutil
 import zipfile
 
 
@@ -115,20 +114,19 @@ def download_marked_images():
     # If there's only one marked image, send it as a single file
     if len(marked_images) == 1:
         return send_from_directory(output_folder, marked_images[0])
+    else:
+        # # If there are multiple marked images, create a zip file and send it
 
-    # # If there are multiple marked images, create a zip file and send it
+        matching_files = [filename for filename in os.listdir(output_folder) if filename.startswith(uniq_id[:9])]
+        zip_filename = input_folder+"/"+uniq_id[:9]+'marked_images.zip'  # Replace with your desired output path
 
-    matching_files = [filename for filename in os.listdir(output_folder) if filename.startswith(uniq_id[:9])]
-    zip_filename = input_folder+"/"+uniq_id[:9]+'marked_images.zip'  # Replace with your desired output path
+        with zipfile.ZipFile(zip_filename, 'w') as zipf:
+            for filename in matching_files:
+                file_path = os.path.join(output_folder, filename)
+                zipf.write(file_path, os.path.basename(file_path))
 
-
-    with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        for filename in matching_files:
-            file_path = os.path.join(output_folder, filename)
-            zipf.write(file_path, os.path.basename(file_path))
-
-    # Send the zip file as a download
-    return send_from_directory(input_folder,uniq_id[:9]+"marked_images.zip", as_attachment=True)
+        # Send the zip file as a download
+        return send_from_directory(input_folder, uniq_id[:9]+"marked_images.zip", as_attachment=True)
 
 
 if __name__ == '__main__':
