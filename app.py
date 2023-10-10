@@ -96,4 +96,4 @@ def upload_and_download():
         return send_from_directory(input_folder, uniq_id[:9] + "marked_images.zip", as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
