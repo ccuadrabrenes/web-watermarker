@@ -45,9 +45,14 @@ def upload_and_download():
 
     for file in files:
         if file and allowed_file(file.filename):
-            filename = secure_filename(uniq_id[:8] + "-" + file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            uploaded_files.append(filename)
+            if file.filename.endswith("png"):
+                filename = secure_filename(uniq_id[:8] + "-" + "watermark.png")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                uploaded_files.append(filename)
+            else:
+                filename = secure_filename(uniq_id[:8] + "-" + file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                uploaded_files.append(filename)
 
     # Load the watermark image
     watermark = Image.open("./tmp/" + uniq_id[:9] + "watermark.png")
@@ -81,7 +86,6 @@ def upload_and_download():
     if len(marked_images) == 1:
         return send_from_directory(output_folder, marked_images[0])
     else:
-        print("GENERANDO EL ZIP")
         matching_files = [filename for filename in os.listdir(output_folder) if filename.startswith(uniq_id[:8])]
         zip_filename = app.config['UPLOAD_FOLDER'] + "/" + uniq_id[:9] + 'marked_images.zip'
 
@@ -89,11 +93,15 @@ def upload_and_download():
             for filename in matching_files:
                 file_path = os.path.join(output_folder, filename)
                 zipf.write(file_path, os.path.basename(file_path))
-        print(app.config["UPLOAD_FOLDER"])
-        print(uniq_id[:9] + "marked_images.zip")
-        print(app.config['UPLOAD_FOLDER'], uniq_id[:9] + "marked_images.zip")
-        #return send_from_directory(app.config['UPLOAD_FOLDER'], uniq_id[:9] + "marked_images.zip", as_attachment=True)
+        #Cleaning the temp files uploaded and created in the tmp and marked folders respectively
+        for file in os.listdir(input_folder):
+            if file.endswith("jpg") or file.endswith("jpeg") or file.endswith("png"):
+                os.remove(input_folder + file)
+        for file in os.listdir(output_folder):
+            if file.endswith("jpg") or file.endswith("jpeg"):
+                os.remove(output_folder + file)
         return send_from_directory(input_folder, uniq_id[:9] + "marked_images.zip", as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run()
